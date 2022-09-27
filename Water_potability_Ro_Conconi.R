@@ -224,9 +224,6 @@ res %>% ggplot(aes(as.numeric(accuracy),
 
 res %>% filter(accuracy == max(accuracy) & f_1 == max(f_1))
 
-#DATA EXPORT
-write.csv(wp,"water_potability_export.csv", row.names = T)
-
 
 
 
