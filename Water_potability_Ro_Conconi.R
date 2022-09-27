@@ -13,6 +13,10 @@ if(!require(gbm)) install.packages("gbm",
                                    repos = "http://cran.us.r-project.org")
 if(!require(kernlab)) install.packages("kernlab", 
                                    repos = "http://cran.us.r-project.org")
+if(!require(readr)) install.packages("readr", 
+                                       repos = "http://cran.us.r-project.org")
+#DATASET IN GITHUB REPO
+#https://github.com/JRPoncedeLeonC/Water-potability.git
 
 #LIBRARY IMPORT 
 library(tidyverse)
@@ -22,9 +26,11 @@ library(xgboost)
 library(naivebayes)
 library(gbm)
 library(kernlab)
+library(readr) #to read the csv file
 
 #DATA IMPORT
-wp <- read.csv("water_potability.csv")
+wp <- read_csv(url("https://raw.githubusercontent.com/JRPoncedeLeonC/Water-potability/main/water_potability.csv"))
+#wp <- read.csv("water_potability.csv")
 
 #DATA SPLITTING
 y <- wp$Potability
