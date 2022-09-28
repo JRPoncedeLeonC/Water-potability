@@ -1,0 +1,681 @@
+---
+title: "Water Potability"
+author: "Rodrigo Ponce de Leon"
+date: '2022-09-06'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Contents:
+
+1. Introduction.
+2. Package loading.
+3. Data import.
+4. View at data.
+5. Data splitting and training set analysis.
+6. Data preparation.
+7. Model training and evaluation.
+8. Results
+9. Conclusions. 
+
+
+INTRODUCTION:
+
+As part of the PH125.9x:Data Science: Capstone, in this project the water_potability.csv data set, obtained from kaggle, and whose author is Aditya Kadiwal, is analyzed to fit an ML model or algorithm to predict water potability (1 means potable and 0 otherwise). 
+
+* Steps that took place to achieve the goal:
+
+1. Data import.
+
+2. Analysis of the variables in the data set.
+
+3. Data splitting into train set and test set, data preparation-by scaling and by either imputing null values with the mean (train_data_1, test_data_1) or discarding NA-containing rows (train_data_2, test_data_2).
+
+4. Training of eight different models. All 8 models were trained and tested with train_data_1 and test_data_1, while 3 were trained and tested for train_data_2 and test_data_2.
+
+The variables in the data set are pH value, hardness, solids, chloramines, sulfate, conductivity, organic carbon, trihalomethanes, turbidity, and potability. In summary, the data set has 3276 observations and 10 variables. 
+
+The following are the descriptions of the variables the dataset has:
+
+
+1. pH value:
+
+PH is an important parameter in evaluating the acid–base balance of water. It is also the indicator of acidic or alkaline condition of water status. WHO has recommended maximum permissible limit of pH from 6.5 to 8.5. The current investigation ranges were 6.52–6.83 which are in the range of WHO standards.
+
+2. Hardness:
+
+Hardness is mainly caused by calcium and magnesium salts. These salts are dissolved from geologic deposits through which water travels. The length of time water is in contact with hardness producing material helps determine how much hardness there is in raw water. Hardness was originally defined as the capacity of water to precipitate soap caused by Calcium and Magnesium.
+
+3. Solids (Total dissolved solids - TDS):
+
+Water has the ability to dissolve a wide range of inorganic and some organic minerals or salts such as potassium, calcium, sodium, bicarbonates, chlorides, magnesium, sulfates etc. These minerals produced un-wanted taste and diluted color in appearance of water. This is the important parameter for the use of water. The water with high TDS value indicates that water is highly mineralized. Desirable limit for TDS is 500 mg/l and maximum limit is 1000 mg/l which prescribed for drinking purpose.
+
+4. Chloramines:
+
+Chlorine and chloramine are the major disinfectants used in public water systems. Chloramines are most commonly formed when ammonia is added to chlorine to treat drinking water. Chlorine levels up to 4 milligrams per liter (mg/L or 4 parts per million (ppm)) are considered safe in drinking water.
+
+5. Sulfate:
+
+Sulfates are naturally occurring substances that are found in minerals, soil, and rocks. They are present in ambient air, groundwater, plants, and food. The principal commercial use of sulfate is in the chemical industry. Sulfate concentration in seawater is about 2,700 milligrams per liter (mg/L). It ranges from 3 to 30 mg/L in most freshwater supplies, although much higher concentrations (1000 mg/L) are found in some geographic locations.
+
+6. Conductivity:
+
+Pure water is not a good conductor of electric current rather’s a good insulator. Increase in ions concentration enhances the electrical conductivity of water. Generally, the amount of dissolved solids in water determines the electrical conductivity. Electrical conductivity (EC) actually measures the ionic process of a solution that enables it to transmit current. According to WHO standards, EC value should not exceeded 400 muS/cm.
+
+7. Organic_carbon:
+
+Total Organic Carbon (TOC) in source waters comes from decaying natural organic matter (NOM) as well as synthetic sources. TOC is a measure of the total amount of carbon in organic compounds in pure water. According to US EPA < 2 mg/L as TOC in treated / drinking water, and < 4 mg/Lit in source water which is use for treatment.
+
+8. Trihalomethanes:
+
+THMs are chemicals which may be found in water treated with chlorine. The concentration of THMs in drinking water varies according to the level of organic material in the water, the amount of chlorine required to treat the water, and the temperature of the water that is being treated. THM levels up to 80 ppm is considered safe in drinking water.
+
+9. Turbidity:
+
+The turbidity of water depends on the quantity of solid matter present in the suspended state. It is a measure of light emitting properties of water and the test is used to indicate the quality of waste discharge with respect to colloidal matter. The mean turbidity value obtained for Wondo Genet Campus (0.98 NTU) is lower than the WHO recommended value of 5.00 NTU.
+
+10. Potability:
+
+Indicates if water is safe for human consumption where 1 means Potable and 0 means Not potable.
+
+The data can be obtained from the following url: https://www.kaggle.com/datasets/adityakadiwal/water-potability?resource=download
+
+
+PACKAGE LOADING: 
+
+
+```{r}
+if(!require(tidyverse)) install.packages("tidyverse", 
+                                         repos = "http://cran.us.r-project.org")
+if(!require(caret)) install.packages("caret", 
+                                     repos = "http://cran.us.r-project.org")
+if(!require(data.table)) install.packages("data.table", 
+                                          repos = "http://cran.us.r-project.org")
+if(!require(xgboost)) install.packages("xgboost", 
+                                       repos = "http://cran.us.r-project.org")
+if(!require(naivebayes)) install.packages("naivebayes", 
+                                       repos = "http://cran.us.r-project.org")
+if(!require(gbm)) install.packages("gbm", 
+                                       repos = "http://cran.us.r-project.org")
+if(!require(kernlab)) install.packages("kernlab", 
+                                       repos = "http://cran.us.r-project.org")
+```
+```{r}
+library(tidyverse)
+library(caret)
+library(data.table)
+```
+
+
+DATA IMPORT:
+
+The data is stored in the same working directory. Therefore, it can be imported using the name of the csv file:
+
+
+```{r}
+wp <- read_csv(url("https://raw.githubusercontent.com/JRPoncedeLeonC/Water-potability/main/water_potability.csv"))
+```
+
+
+VIEW AT DATA:
+
+The data is analyzed to see its structure and distribution of the variables:
+
+
+```{r}
+str(wp) #structure of dataset 
+```
+```{r}
+head(wp) #first 6 observations
+```
+```{r}
+summary(wp) #summary of numeric variables 
+```
+```{r}
+wp %>% gather(key = "variable", value = "value") %>% 
+  ggplot(aes(value, fill = variable)) + geom_histogram() + 
+  theme(axis.text.x = element_text(angle = 90)) +
+  facet_wrap(~ variable, scales = "free") #histogram for all variables
+```
+```{r}
+gather(wp, key = "k", value = "v", -Potability) %>% 
+  ggplot(aes(x=factor(Potability), y=v, col = Potability)) + 
+  geom_boxplot() +
+  facet_wrap(~ k, scales="free") +
+  xlab("Potability") + 
+  ylab("Values in different units of measure") #boxplot of all variables by potability
+```
+
+
+The dataset contains only numerical data, has 3276 and 10 variables, and all the predictors have some sort of symmetry. Also, there aren't histograms that are tail-heavy, which makes it easier for some ML algorithms to detect patterns. On top of that, there are more observations for potability equals 0 than 1.
+
+When looking at the boxplots for each variable all of them have outliers. Moreover, their interquartile ranges don't vary much for potable and non-potable water.
+
+The missing values in the entire dataset are analyzed:
+
+
+```{r}
+sum(is.na(wp)) #total number of NA
+```
+```{r}
+wp %>% gather(key = "variable", value = "value") %>% 
+  group_by(variable) %>% summarise(na_num = sum(is.na(value)))
+```
+
+
+From the tibble above, we can see that pH, Sulfate, and Trihalomethanes are the only variables with missing values, with Sulfate being the one with most missing values. In total, we have 1434 NAs.
+
+DATA SPLITTING AND TRAINING SET ANALYSIS:
+
+A test set and train set are created. The train set is analyzed to see if there are any correlations between the variables:
+
+
+```{r}
+y <- wp$Potability
+set.seed(42, sample.kind = "default")
+test_index <- createDataPartition(y, times=1, p=0.2, list=F)
+train_data <- wp[-test_index,]
+test_data <- wp[test_index,]
+```
+```{r}
+cor_mat <- cor(train_data, use = "complete.obs")
+```
+```{r}
+library(corrplot)
+corrplot(cor_mat, type = "upper", 
+         tl.col = "black", tl.srt = 45, method="color")
+```
+
+
+From the plot above, we can see that there is no strong correlations between the variables, except when they are compared with themselves. We see that the strongest correlation for Potability is when this variable is compared against Solids. However, still, the correlation is not strong. 
+
+Let's see if we can get stronger correlations for Potability by experimenting with a few attribute combinations. Let's experiment with Hardness/Solids, Hardness/Turbidity and Conductivity/Hardness:
+
+
+```{r}
+cor_mat_1 <- cor(train_data %>% mutate("HS"=Hardness/Solids, 
+                      "HT"=Hardness/Turbidity,
+                      "CH"=Conductivity/Hardness), use = "complete.obs")
+corrplot(cor_mat_1, type = "upper", 
+         tl.col = "black", tl.srt = 45, method="color")
+
+```
+
+
+Looking at both previous plots, there are no strong correlations with Potability and the rest of the variables, and this makes sense since Potability is a nominal-categorical variable. Therefore, we won't consider the attribute combinations to train the ML algorithms.
+
+
+DATA PREPARATION:
+
+For the data preparation process, we first need to replace the missing values with a statistical measure like the mean. Afterwards, scaling of the data can be performed for better comparison.
+
+
+```{r}
+ReplaceNa <- function(df){ #function to replace the missing values
+  df_1 <- df %>% 
+    replace_na(list(ph=mean(df$ph,na.rm=T),
+                    Sulfate=mean(df$Sulfate,na.rm=T),
+                    Trihalomethanes=mean(df$Trihalomethanes,na.rm=T)))
+  return(df_1)
+}
+```
+```{r}
+ScaleData <- function(df){ #function to scale the data
+  df_pred <- df %>% select(-Potability) %>% scale() #dataframe with scaled predictors
+  df_y <- df %>% select(Potability) #dataframe with Potability
+  return(cbind(df_pred, df_y))
+}
+```
+```{r}
+train_data_1 <- ReplaceNa(train_data) %>% ScaleData #clean training set
+```
+```{r}
+test_data_1 <- ReplaceNa(test_data) %>% ScaleData #clean test set 
+```
+```{r}
+train_data_1 %>% gather(key = "variable", value = "value") %>% 
+  ggplot(aes(value, fill = variable)) + geom_histogram() + 
+  theme(axis.text.x = element_text(angle = 90)) +
+  facet_wrap(~ variable, scales = "free") #histogram for all variables
+```
+
+
+MODEL TRAINING AND EVALUATION:
+
+Now that the data is prepared, different models can be trained to see which one performs the best. In this case, classification Machine Learning algorithms are used. On top of that, k-fold cross-validation and parameter tuning on some algorithms are considered:
+
+
+```{r}
+train_control <- trainControl(method = "cv", number = 10) #for algorithms to perform cross validation
+```
+```{r}
+#dataframe of results
+res <- data.frame(matrix(nrow = 0, ncol = 4))
+colnames(res) <- c("model", "data_set", "accuracy", "f_1")
+```
+
+
+* KNN: 
+
+
+```{r}
+#knn algorithm
+set.seed(42, sample.kind = "default")
+train_knn <- train(factor(Potability) ~ ., method = "knn",
+                   tuneGrid = data.frame(k = seq(3, 45, 2)),
+                   data = train_data_1, 
+                   trControl = train_control)
+```
+```{r}
+ggplot(train_knn, highlight = T)
+```
+```{r}
+train_knn$bestTune #best k for the algorithm
+```
+```{r}
+pred_knn <- predict(train_knn, test_data_1)
+```
+```{r}
+confusionMatrix(pred_knn,
+                factor(test_data_1$Potability))$overall["Accuracy"]
+```
+```{r}
+#_1
+F_meas(data = pred_knn, reference = factor(test_data_1$Potability))
+```
+```{r}
+#data stored
+res[1,] <- c("KNN", 1, as.numeric(confusionMatrix(pred_knn,
+                factor(test_data_1$Potability))$overall["Accuracy"]),
+             F_meas(data = pred_knn, reference = factor(test_data_1$Potability)))
+```
+
+
+* Random Forest:
+
+
+```{r}
+#random forest
+set.seed(42, sample.kind = "default")
+train_rf <- train(factor(Potability) ~., method = "rf",
+                  data = train_data_1,
+                  tuneGrid = data.frame(mtry = seq(3:15)), #3
+                  trControl = train_control, #cross-validation
+                  ntree = 200) #number of trees
+```
+```{r}
+ggplot(train_rf, highlight = T)
+```
+```{r}
+train_rf$bestTune
+```
+```{r}
+pred_rf <- predict(train_rf, test_data_1)
+```
+```{r}
+confusionMatrix(pred_rf,
+                factor(test_data_1$Potability))$overall["Accuracy"]
+```
+```{r}
+#we store the data
+res[nrow(res)+1,] <- c("rf", 1, as.numeric(confusionMatrix(pred_rf,
+                factor(test_data_1$Potability))$overall["Accuracy"]),
+             F_meas(data = pred_rf, reference = factor(test_data_1$Potability)))
+```
+
+
+* Logistic Regression:
+
+
+```{r}
+set.seed(42, sample.kind = "default")
+train_glm <- train(factor(Potability) ~., method = "glm",
+                  data = train_data_1)
+```
+```{r}
+pred_glm <- predict(train_glm, test_data_1)
+```
+```{r}
+confusionMatrix(pred_glm,
+                factor(test_data_1$Potability))$overall["Accuracy"]
+```
+```{r}
+res[nrow(res)+1,] <- c("glm", 1, as.numeric(confusionMatrix(pred_glm,
+                factor(test_data_1$Potability))$overall["Accuracy"]),
+             F_meas(data = pred_glm, reference = factor(test_data_1$Potability)))
+```
+
+
+* XGBoost:
+The algorithm used is a variation of the xgbtree model. Since the aim is to perform parameter tuning, train_control1 is created to reduce the amount of iterations for the k-fold cross-validation and, thus, optimize time.
+
+If the one who is seeing this project wants the training to be quicker, please substitute the parameters in expand.grid with the ones that are commented.
+
+
+```{r}
+library(xgboost)
+```
+
+```{r}
+train_control1 <- trainControl(method = "cv", number = 3)
+set.seed(42, sample.kind = "default")
+train_xgb <- train(factor(Potability) ~., method = "xgbDART",
+                  data = train_data_1,
+                  trControl = train_control1,
+                   tuneGrid = expand.grid(
+                     nrounds = c(11),
+                     max_depth = c(6, 7, 8),#8
+                     eta = c(0, 0.01, 0.1, 0.2), #0.01
+                     gamma = c(0, 0.001, 0.01), #0.01	
+                     subsample = 0.5,
+                     colsample_bytree = c(0.5, 0.8, 1),#1	
+                     rate_drop = c(0, 0.4,0.5), #0
+                     skip_drop = c(0, 0.4,0.5), #0.5
+                     min_child_weight = c(0,1,2) #1
+                   ))
+```
+
+```{r}
+train_xgb$bestTune
+```
+
+```{r}
+pred_xgb <- predict(train_xgb, test_data_1)
+```
+```{r}
+confusionMatrix(pred_xgb,
+                factor(test_data_1$Potability))$overall["Accuracy"]
+```
+```{r}
+res[nrow(res)+1,] <- c("xgbDART", 1, as.numeric(confusionMatrix(pred_xgb,
+                factor(test_data_1$Potability))$overall["Accuracy"]),
+             F_meas(data = pred_xgb, reference = factor(test_data_1$Potability)))
+```
+
+
+* Naive Bayes:
+
+
+```{r}
+library(naivebayes)
+```
+```{r}
+set.seed(42, sample.kind = "default")
+train_nb <- train(factor(Potability) ~., data = train_data_1, method = "naive_bayes")
+```
+```{r}
+pred_nb <- predict(train_nb, test_data_1)
+```
+```{r}
+confusionMatrix(pred_nb,
+                factor(test_data_1$Potability))$overall["Accuracy"]
+```
+```{r}
+res[nrow(res)+1,] <- c("naive_bayes", 1, as.numeric(confusionMatrix(pred_nb,
+                factor(test_data_1$Potability))$overall["Accuracy"]),
+             F_meas(data = pred_nb, reference = factor(test_data_1$Potability)))
+```
+
+
+* xgbTree:
+If the user wants a faster training, please set the parameters to the ones that are commented.
+
+
+```{r}
+library(gbm)
+```
+```{r}
+set.seed(42, sample.kind = "default")
+train_xgbT <- train(factor(Potability) ~., data = train_data_1, 
+                   method = "xgbTree",
+                   trControl = train_control,
+                   tuneGrid = expand.grid(
+                     nrounds=c(63,65,70), #65
+                     eta=c(0.01, 0.05), #0.05
+                     max_depth=c(6, 7, 8),#6
+                     colsample_bytree=c(0.5, 1), #1
+                     subsample=0.5, 
+                     gamma=c(0.0001, 0.001, 0.01), #0.01
+                     min_child_weight=c(0,1,2))) #0
+
+```
+```{r}
+train_xgbT$bestTune
+```
+```{r}
+pred_xgbT <- predict(train_xgbT, test_data_1)
+```
+```{r}
+confusionMatrix(pred_xgbT,
+                factor(test_data_1$Potability))$overall["Accuracy"]
+```
+```{r}
+res[nrow(res)+1,] <- c("xgbTree", 1, as.numeric(confusionMatrix(pred_xgbT,
+                factor(test_data_1$Potability))$overall["Accuracy"]),
+             F_meas(data = pred_xgbT, reference = factor(test_data_1$Potability)))
+```
+
+
+* QDA:
+
+
+```{r}
+set.seed(42, sample.kind = "default")
+train_qda <- train(factor(Potability) ~., data = train_data_1, 
+                   method = "qda")
+```
+```{r}
+pred_qda <- predict(train_qda, test_data_1)
+```
+```{r}
+confusionMatrix(pred_qda,
+                factor(test_data_1$Potability))$overall["Accuracy"]
+```
+```{r}
+res[nrow(res)+1,] <- c("qda", 1, as.numeric(confusionMatrix(pred_qda,
+                factor(test_data_1$Potability))$overall["Accuracy"]),
+             F_meas(data = pred_qda, reference = factor(test_data_1$Potability)))
+```
+
+
+* Least Squares Support Vector Machine:
+If the user wants a faster training, please set the parameters to the ones that are commented.
+
+
+```{r}
+library(kernlab)
+```
+```{r}
+set.seed(42, sample.kind = "default")
+train_svm <- train(factor(Potability) ~., method = "lssvmRadial",
+                  data = train_data_1,
+                  tuneGrid = expand.grid(
+                    tau = c(0.001,0.009,0.01,0.1),#0.009		
+                    sigma = c(0.001,0.009,0.01,0.1)#0.01	
+                  ), 
+                  trControl = train_control) 
+                 
+```
+```{r}
+ggplot(train_svm, highlight = T)
+```
+```{r}
+train_svm$bestTune
+```
+```{r}
+pred_svm <- predict(train_svm, test_data_1)
+```
+```{r}
+confusionMatrix(pred_svm,
+                factor(test_data_1$Potability))$overall["Accuracy"]
+```
+```{r}
+res[nrow(res)+1,] <- c("lssvmRadial", 1, as.numeric(confusionMatrix(pred_svm,
+                factor(test_data_1$Potability))$overall["Accuracy"]),
+             F_meas(data = pred_svm, reference = factor(test_data_1$Potability)))
+```
+
+
+A new train set, and test set, is created to see if the accuracy can improve. In this case, the data sets have NA-containing rows removed:
+
+
+```{r}
+set.seed(42, sample.kind = "default")
+#new data sets
+test_index1 <- createDataPartition(y, times=1, p=0.27, list=F)
+train_data1 <- wp[-test_index1,]
+test_data1 <- wp[test_index1,]
+train_data_2 <- train_data1[complete.cases(train_data1),] %>% ScaleData() #scaled clean data without NA rows
+test_data_2 <- test_data1[complete.cases(test_data1),] %>% ScaleData() #scaled clean data without NA rows
+```
+
+
+* Least Squares Support Vector Machine:
+If the user wants a faster training, please set the parameters to the ones that are commented.
+
+
+```{r}
+set.seed(42, sample.kind = "default")
+train_svm1 <- train(factor(Potability) ~., method = "lssvmRadial",
+                  data = train_data_2,
+                  tuneGrid = expand.grid(
+                    tau = c(0.001,0.009,0.01,0.1), # 0.001
+                    sigma = c(0.001,0.009,0.01,0.1)	#0.009	
+                  ), 
+                  trControl = train_control) 
+                 
+```
+```{r}
+ggplot(train_svm1, highlight = T)
+```
+```{r}
+train_svm1$bestTune
+```
+```{r}
+pred_svm1 <- predict(train_svm1, test_data_2)
+```
+```{r}
+confusionMatrix(pred_svm1,
+                factor(test_data_2$Potability))$overall["Accuracy"]
+```
+```{r}
+res[nrow(res)+1,] <- c("lssvmRadial", 2, as.numeric(confusionMatrix(pred_svm1,
+                factor(test_data_2$Potability))$overall["Accuracy"]),
+             F_meas(data = pred_svm1, reference = factor(test_data_2$Potability)))
+```
+
+
+*Random Forest:
+
+
+```{r}
+#random forest
+set.seed(42, sample.kind = "default")
+train_rf1 <- train(factor(Potability) ~., method = "rf",
+                  data = train_data_2,
+                  tuneGrid = data.frame(mtry = seq(3:15)), #parameter tuning mtry = 5
+                  trControl = train_control, #cross-validation
+                  ntree = 200) #number of trees
+
+```
+```{r}
+ggplot(train_rf1, highlight = T)
+```
+```{r}
+pred_rf1 <- predict(train_rf1, 
+                   test_data_2)
+```
+```{r}
+confusionMatrix(pred_rf1,
+                factor(test_data_2$Potability))$overall["Accuracy"]
+```
+```{r}
+res[nrow(res)+1,] <- c("rf", 2, as.numeric(confusionMatrix(pred_rf1,
+                factor(test_data_2$Potability))$overall["Accuracy"]),
+             F_meas(data = pred_rf1, reference = factor(test_data_2$Potability)))
+```
+
+
+* xgbTree:
+If the user wants a faster training, please set the parameters to the ones that are commented.
+
+
+```{r}
+set.seed(42, sample.kind = "default")
+train_xgbT1 <- train(factor(Potability) ~., data = train_data_2, 
+                   method = "xgbTree",
+                   trControl = train_control,
+                   tuneGrid = expand.grid(
+                     nrounds=c(63,65,70), #70
+                     eta=c(0.01, 0.05), #0.01
+                     max_depth=c(6, 7, 8),#8
+                     colsample_bytree=c(0.5, 1), #1
+                     subsample=0.5, 
+                     gamma=c(0.0001, 0.001, 0.01), #0.001
+                     min_child_weight=c(0,1,2))) #1
+
+```
+```{r}
+train_xgbT1$bestTune
+```
+```{r}
+pred_xgbT1 <- predict(train_xgbT1, test_data_2)
+```
+```{r}
+confusionMatrix(pred_xgbT1,
+                factor(test_data_2$Potability))$overall["Accuracy"]
+```
+```{r}
+res[nrow(res)+1,] <- c("xgbTree", 2, as.numeric(confusionMatrix(pred_xgbT1,
+                factor(test_data_2$Potability))$overall["Accuracy"]),
+             F_meas(data = pred_xgbT1, reference = factor(test_data_2$Potability)))
+```
+
+
+RESULTS:
+
+From the plot below, we can see that by using the scaled data sets which had their NA-rows discarded (train_data_2 and test_data_2) and by training an XgbTree model, the highest accuracy and F1 score is obtained out of all cases. On the other hand, the Naive Bayes model trained and tested with train_data_1 and test_data_1, respectively, had the lowest results.
+
+We can see that in both data sets, the model that performs the best is xgbTree.
+
+
+```{r}
+res %>% ggplot(aes(as.numeric(accuracy), 
+                   as.numeric(f_1), col = model, shape = data_set)) + 
+  geom_point() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  xlab("Accuracy") + ylab("F1 score")
+```
+```{r}
+res %>% filter(accuracy == max(accuracy) & f_1 == max(f_1)) #best result
+```
+
+
+CONCLUSIONS:
+
+After following the steps to achieve the aim of this project, it was found that using the data that was scaled and had its NA-rows removed, along with the optimized xgbTree algorithm, the best results were obtained for both accuracy and F1 score. 
+
+This algorithm is crucial, since it helps determine the quality of water based on specific variables, which can tell the user if it is safe for drinking or not. However, the algorithm has its limitations, since the accuracy and F1 score are not above 0.95. For the improvement of it, higher computational power might be needed to find better parameters (enhanced parameter tuning), and, perhaps, training other classification models that were not used in this report.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
